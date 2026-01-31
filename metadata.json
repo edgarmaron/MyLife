@@ -1,0 +1,5 @@
+{
+  "name": "Life Dashboard",
+  "description": "A comprehensive personal tracking app combining finance (expenses, investments, crypto) and health (fitness, diet) into a single, streamlined interface.",
+  "requestFramePermissions": []
+}
