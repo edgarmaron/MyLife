@@ -1,3 +1,4 @@
+
 // Enums
 export enum TransactionType {
   INCOME = 'INCOME',
@@ -154,6 +155,7 @@ export interface UserSettings {
   investmentCurrency: string; // e.g. EUR
   exchangeRate: number; // Investment Currency to Main Currency
   lastBackupDate?: string; // ISO date string
+  pinnedDashboardSection?: 'HEALTH' | 'MONEY' | 'INVEST';
 }
 
 // Global Store State

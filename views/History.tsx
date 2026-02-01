@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store';
 import { Container, Card, Select } from '../components/UI';
-import { format, isWithinInterval, parseISO } from 'date-fns';
+import { format, isWithinInterval, parseISO, startOfMonth, endOfMonth, isSameMonth } from 'date-fns';
 import { Section, DateRange } from '../types';
 
 export const History = ({ range, onBack }: { range: DateRange; onBack?: () => void }) => {
@@ -13,6 +14,21 @@ export const History = ({ range, onBack }: { range: DateRange; onBack?: () => vo
   const logs = state.auditLog
     .filter(l => filter === 'ALL' || l.section === filter)
     .filter(l => inRange(l.timestamp));
+
+  // --- Monthly Summary Logic ---
+  // Only show if range is mostly within one month or we just pick the start date's month
+  const summaryDate = parseISO(range.start);
+  const monthName = format(summaryDate, 'MMMM yyyy');
+  
+  const monthlyStats = useMemo(() => {
+      const expenses = state.expenses.filter(e => isSameMonth(parseISO(e.date), summaryDate)).reduce((sum, e) => sum + e.amount, 0);
+      const saved = state.savingsTransactions.filter(t => t.type === 'DEPOSIT' && isSameMonth(parseISO(t.date), summaryDate)).reduce((sum, t) => sum + t.amount, 0);
+      
+      const weights = state.weightEntries.filter(w => isSameMonth(parseISO(w.date), summaryDate)).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const weightChange = weights.length > 1 ? weights[weights.length - 1].weight - weights[0].weight : 0;
+
+      return { expenses, saved, weightChange };
+  }, [state.expenses, state.savingsTransactions, state.weightEntries, summaryDate]);
 
   return (
     <Container>
@@ -29,6 +45,29 @@ export const History = ({ range, onBack }: { range: DateRange; onBack?: () => vo
             {range.label}
         </div>
       </div>
+
+      {/* Monthly Summary Block */}
+      {range.preset === 'MONTH' && (
+          <Card className="bg-slate-900 text-white mb-6 border-none">
+              <div className="text-xs font-bold text-slate-400 uppercase mb-4">{monthName} Summary</div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <div className="text-xs text-slate-400">Total Spent</div>
+                      <div className="font-bold text-lg">{state.settings.mainCurrency}{monthlyStats.expenses.toLocaleString()}</div>
+                  </div>
+                  <div>
+                      <div className="text-xs text-slate-400">Total Saved</div>
+                      <div className="font-bold text-lg text-emerald-400">+{state.settings.mainCurrency}{monthlyStats.saved.toLocaleString()}</div>
+                  </div>
+                  <div>
+                      <div className="text-xs text-slate-400">Weight Change</div>
+                      <div className={`font-bold text-lg ${monthlyStats.weightChange <= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {monthlyStats.weightChange > 0 ? '+' : ''}{monthlyStats.weightChange.toFixed(1)} kg
+                      </div>
+                  </div>
+              </div>
+          </Card>
+      )}
 
       <div className="mb-4">
         <Select 
